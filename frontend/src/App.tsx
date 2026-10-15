@@ -11,11 +11,13 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import LogoutIcon from '@mui/icons-material/Logout';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import HistoryIcon from '@mui/icons-material/History';
 
 import ComponentList from './components/ComponentList';
 import ComponentForm from './components/ComponentForm';
 import OrderBuilder from './components/OrderBuilder';
 import OrdersList from './components/OrdersList';
+import OrderHistoryCard from './components/OrderHistoryCard';
 import Login from './components/Login';
 import ScannerDatasheetModal from './components/ScannerDatasheetModal';
 import AdminAccessPage from './components/AdminAccessPage';
@@ -91,6 +93,12 @@ const NavigationLayout = ({ children }: { children: JSX.Element }) => {
             <ListItemText primary="Objednávky" />
           </ListItemButton>
         </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to="/order-history">
+            <ListItemIcon><HistoryIcon /></ListItemIcon>
+            <ListItemText primary="Historie Objednávek" />
+          </ListItemButton>
+        </ListItem>
         {user?.is_staff && (
           <ListItem disablePadding>
             <ListItemButton component={Link} to="/admin-access">
@@ -161,6 +169,7 @@ function AppRoutes() {
               <Route path='/add' element={<ComponentForm />} />
               <Route path='/edit/:id' element={<ComponentForm />} />
               <Route path='/orders' element={<OrdersList />} />
+              <Route path='/order-history' element={<OrderHistoryCard />} />
               <Route path='/admin-access' element={<AdminAccessPage />} />
               <Route path='/order/new' element={<OrderBuilder />} />
               <Route path='/order/:id' element={<OrderBuilder />} />

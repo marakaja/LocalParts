@@ -10,6 +10,7 @@ import {
   FormControlLabel,
   Grid,
   IconButton,
+  Stack,
   Switch,
   TextField,
   Typography,
@@ -39,8 +40,10 @@ const AdminAccessCard: React.FC = () => {
     is_staff: false,
     is_active: true,
   });
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [apiConfigured, setApiConfigured] = useState(false);
+  const [searchApiKeyInput, setSearchApiKeyInput] = useState('');
+  const [orderHistoryApiKeyInput, setOrderHistoryApiKeyInput] = useState('');
+  const [searchApiConfigured, setSearchApiConfigured] = useState(false);
+  const [orderHistoryApiConfigured, setOrderHistoryApiConfigured] = useState(false);
   const [apiUpdatedAt, setApiUpdatedAt] = useState<string>('');
 
   const isAdmin = useMemo(() => !!user?.is_staff, [user]);
@@ -63,7 +66,8 @@ const AdminAccessCard: React.FC = () => {
     if (!isAdmin) return;
     try {
       const response = await axios.get('/api/mouser-api-key/');
-      setApiConfigured(Boolean(response.data?.configured));
+      setSearchApiConfigured(Boolean(response.data?.search_configured));
+      setOrderHistoryApiConfigured(Boolean(response.data?.order_history_configured));
       setApiUpdatedAt(response.data?.updated_at || '');
     } catch {
       setError('Nepodařilo se načíst stav API klíče.');
@@ -77,8 +81,12 @@ const AdminAccessCard: React.FC = () => {
 
   const handleSaveApiKey = async () => {
     try {
-      await axios.put('/api/mouser-api-key/', { api_key: apiKeyInput.trim() });
-      setApiKeyInput('');
+      await axios.put('/api/mouser-api-key/', {
+        search_api_key: searchApiKeyInput.trim(),
+        order_history_api_key: orderHistoryApiKeyInput.trim(),
+      });
+      setSearchApiKeyInput('');
+      setOrderHistoryApiKeyInput('');
       fetchApiKeyStatus();
     } catch {
       setError('Uložení API klíče se nepodařilo.');
@@ -148,30 +156,49 @@ const AdminAccessCard: React.FC = () => {
           }}
         >
           <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-            Mouser API klíč
+            Mouser API klíče
           </Typography>
           <Typography variant="body2" color="text.secondary" mb={1}>
-            Klíč se ukládá pouze na backendu a ve frontendu se nikdy nezobrazuje celý.
+            Jeden klíč je pro vyhledávání dílů, druhý pro historii objednávek. Ve frontendu se klíče nikdy nezobrazují celé.
           </Typography>
-          <Box display="flex" gap={1} flexDirection={{ xs: 'column', md: 'row' }}>
+          <Stack spacing={1.5}>
             <TextField
               type="password"
               size="small"
               fullWidth
-              label="Nový API klíč"
-              value={apiKeyInput}
-              onChange={(e) => setApiKeyInput(e.target.value)}
+              label="API klíč pro hledání dílů"
+              value={searchApiKeyInput}
+              onChange={(e) => setSearchApiKeyInput(e.target.value)}
             />
-            <Button variant="contained" onClick={handleSaveApiKey} disabled={!apiKeyInput.trim()}>
-              Uložit klíč
-            </Button>
-          </Box>
-          <Box mt={1} display="flex" gap={1} flexWrap="wrap">
-            <Chip size="small" color={apiConfigured ? 'success' : 'default'} label={apiConfigured ? 'Klíč nastaven' : 'Klíč nenastaven'} />
-            {apiUpdatedAt && (
-              <Chip size="small" variant="outlined" label={`Aktualizace: ${new Date(apiUpdatedAt).toLocaleString('cs-CZ')}`} />
-            )}
-          </Box>
+            <TextField
+              type="password"
+              size="small"
+              fullWidth
+              label="API klíč pro historii objednávek"
+              value={orderHistoryApiKeyInput}
+              onChange={(e) => setOrderHistoryApiKeyInput(e.target.value)}
+            />
+            <Box display="flex" gap={1} flexWrap="wrap" alignItems="center">
+              <Button variant="contained" onClick={handleSaveApiKey} disabled={!searchApiKeyInput.trim() && !orderHistoryApiKeyInput.trim()}>
+                Uložit klíče
+              </Button>
+              {apiUpdatedAt && (
+                <Chip size="small" variant="outlined" label={`Aktualizace: ${new Date(apiUpdatedAt).toLocaleString('cs-CZ')}`} />
+              )}
+            </Box>
+            <Box display="flex" gap={1} flexWrap="wrap">
+              <Chip
+                size="small"
+                color={searchApiConfigured ? 'success' : 'default'}
+                label={searchApiConfigured ? 'Hledání: nastaveno' : 'Hledání: nenastaveno'}
+              />
+              <Chip
+                size="small"
+                color={orderHistoryApiConfigured ? 'success' : 'default'}
+                label={orderHistoryApiConfigured ? 'Historie: nastaveno' : 'Historie: nenastaveno'}
+              />
+            </Box>
+          </Stack>
         </Box>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

@@ -40,7 +40,7 @@ echo "==> Starting Django backend on http://0.0.0.0:8000"
 (
   cd "$ROOT_DIR/backend"
   # shellcheck disable=SC1091
-  source "ls"
+  source "$VENV_DIR/bin/activate"
   python manage.py runserver 0.0.0.0:8000
 ) &
 BACKEND_PID=$!

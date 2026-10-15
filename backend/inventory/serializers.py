@@ -62,16 +62,27 @@ class UserAccessSerializer(serializers.ModelSerializer):
 
 
 class MouserApiKeySerializer(serializers.ModelSerializer):
-    api_key = serializers.CharField(source='mouser_api_key', write_only=True, required=False, allow_blank=True)
-    configured = serializers.SerializerMethodField(read_only=True)
+    search_api_key = serializers.CharField(source='mouser_search_api_key', write_only=True, required=False, allow_blank=True)
+    order_history_api_key = serializers.CharField(source='mouser_order_history_api_key', write_only=True, required=False, allow_blank=True)
+    search_configured = serializers.SerializerMethodField(read_only=True)
+    order_history_configured = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = AppConfiguration
-        fields = ['api_key', 'configured', 'updated_at']
-        read_only_fields = ['configured', 'updated_at']
+        fields = [
+            'search_api_key',
+            'order_history_api_key',
+            'search_configured',
+            'order_history_configured',
+            'updated_at',
+        ]
+        read_only_fields = ['search_configured', 'order_history_configured', 'updated_at']
 
-    def get_configured(self, obj):
-        return bool(obj.mouser_api_key)
+    def get_search_configured(self, obj):
+        return bool(obj.mouser_search_api_key or obj.mouser_api_key)
+
+    def get_order_history_configured(self, obj):
+        return bool(obj.mouser_order_history_api_key or obj.mouser_search_api_key or obj.mouser_api_key)
 
 class PurchaseOrderItemSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
@@ -105,15 +116,49 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     tag_ids = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), source='tags', many=True, write_only=True, required=False
     )
+    matched_local_order_id = serializers.PrimaryKeyRelatedField(
+        source='matched_local_order',
+        queryset=PurchaseOrder.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+    matched_local_order = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = PurchaseOrder
-        fields = ['id', 'name', 'created_at', 'is_completed', 'items', 'tags', 'tag_ids']
+        fields = [
+            'id',
+            'name',
+            'created_at',
+            'is_completed',
+            'items',
+            'tags',
+            'tag_ids',
+            'mouser_order_number',
+            'mouser_data',
+            'is_mouser_order',
+            'matched_local_order',
+            'matched_local_order_id',
+        ]
+
+    def get_matched_local_order(self, obj):
+        if not obj.matched_local_order:
+            return None
+        return {
+            'id': obj.matched_local_order.id,
+            'name': obj.matched_local_order.name,
+            'is_completed': obj.matched_local_order.is_completed,
+        }
 
     def create(self, validated_data):
         items_data = validated_data.pop('items')
         tags_data = validated_data.pop('tags', [])
+        matched_local_order = validated_data.pop('matched_local_order', None)
         order = PurchaseOrder.objects.create(**validated_data)
+        if matched_local_order is not None:
+            order.matched_local_order = matched_local_order
+            order.save(update_fields=['matched_local_order'])
         order.tags.set(tags_data)
         
         for item_data in items_data:
@@ -124,6 +169,7 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
 
 
     def update(self, instance, validated_data):
+        matched_local_order = validated_data.pop('matched_local_order', None)
         if 'items' in validated_data:
             items_data = validated_data.pop('items')
             instance.items.all().delete()
@@ -138,5 +184,10 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
             
         instance.name = validated_data.get('name', instance.name)
         instance.is_completed = validated_data.get('is_completed', instance.is_completed)
+        instance.mouser_order_number = validated_data.get('mouser_order_number', instance.mouser_order_number)
+        instance.mouser_data = validated_data.get('mouser_data', instance.mouser_data)
+        instance.is_mouser_order = validated_data.get('is_mouser_order', instance.is_mouser_order)
+        if matched_local_order is not None:
+            instance.matched_local_order = matched_local_order
         instance.save()
         return instance

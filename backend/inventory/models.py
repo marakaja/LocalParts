@@ -31,6 +31,17 @@ class PurchaseOrder(models.Model):
     tags = models.ManyToManyField(Tag, blank=True, related_name="orders")
     created_at = models.DateTimeField(auto_now_add=True)
     is_completed = models.BooleanField(default=False)
+    mouser_order_number = models.CharField(max_length=255, blank=True, null=True, help_text="Číslo objednávky z Mouser")
+    mouser_data = models.JSONField(default=dict, blank=True, null=True, help_text="Data z Mouser API")
+    is_mouser_order = models.BooleanField(default=False, help_text="Označuje, zda je to objednávka z Mouser")
+    matched_local_order = models.ForeignKey(
+        'self',
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name='mouser_matches',
+        help_text='Místní objednávka přiřazená k Mouser objednávce',
+    )
 
     def __str__(self):
         return self.name
@@ -47,6 +58,8 @@ class PurchaseOrderItem(models.Model):
 
 class AppConfiguration(models.Model):
     mouser_api_key = models.CharField(max_length=255, blank=True, default='')
+    mouser_search_api_key = models.CharField(max_length=255, blank=True, default='')
+    mouser_order_history_api_key = models.CharField(max_length=255, blank=True, default='')
     updated_at = models.DateTimeField(auto_now=True)
 
     @classmethod
